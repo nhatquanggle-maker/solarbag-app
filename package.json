@@ -1,0 +1,27 @@
+{
+  "name": "solarbag-application",
+  "version": "1.0.0",
+  "description": "SolarBag Mobile Application - Smart IoT Backpack & Outdoor Expedition Operating System",
+  "main": "server/src/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/src/index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/src/index.js"
+  },
+  "keywords": [
+    "solarbag",
+    "outdoor",
+    "trekking",
+    "iot",
+    "react",
+    "mobile"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
