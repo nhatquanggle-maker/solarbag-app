@@ -235,8 +235,8 @@ export const AILensModal: React.FC<AILensModalProps> = ({ isOpen, onClose, onSav
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black animate-in fade-in select-none">
-      <div className="relative w-full max-w-[420px] h-full max-h-[852px] bg-[#121613] flex flex-col justify-between overflow-hidden shadow-2xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black animate-in fade-in select-none">
+      <div className="relative w-full h-full bg-[#121613] flex flex-col justify-between overflow-hidden shadow-2xl">
         {/* Offscreen Canvas for capturing snapshot */}
         <canvas ref={canvasRef} className="hidden" />
         <input

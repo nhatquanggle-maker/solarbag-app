@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MoreHorizontal, Play, Pause, Square, Droplets, Tent, Camera, CloudRain, AlertTriangle, ScanLine, ArrowUpRight, Backpack, ListChecks, Heart, Compass, CheckCircle2, ChevronRight, Navigation, Sparkles, ShieldCheck, BatteryCharging, Radio } from 'lucide-react';
 import { LeafletMap } from '../LeafletMap';
-import { Waypoint } from '../../types';
+import { HardwareState, Waypoint } from '../../types';
 import { playTickSound } from '../../utils/audio';
+import { ActiveTripRecording } from './ActiveTripRecording';
 
 interface TrackTabProps {
   onOpenAILens: () => void;
   onOpenGearCalculator: () => void;
   onSaveTrackSession: (sessionData: { distance: string; duration: string; elevation: string; calories: string }) => void;
+  hardware?: HardwareState;
+  onUpdateHardware?: (updates: Partial<HardwareState>) => void;
 }
 
 interface ActivityType {
@@ -39,7 +42,9 @@ const TERRAIN_ROUTES = [
 export const TrackTab: React.FC<TrackTabProps> = ({
   onOpenAILens,
   onOpenGearCalculator,
-  onSaveTrackSession
+  onSaveTrackSession,
+  hardware,
+  onUpdateHardware
 }) => {
   // Session Status: 'idle' (setup trước khi đi) | 'countdown' (đếm 3-2-1) | 'recording' (đang đi) | 'paused' (tạm dừng)
   const [sessionStatus, setSessionStatus] = useState<'idle' | 'countdown' | 'recording' | 'paused'>('idle');
@@ -134,10 +139,11 @@ export const TrackTab: React.FC<TrackTabProps> = ({
   };
 
   const handleFinish = () => {
-    const finalDist = distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : '7.77 km';
-    const finalDur = elapsedSeconds > 0 ? formatDuration(elapsedSeconds) : '01:48:09';
-    const finalElev = elevationGain > 0 ? `+${elevationGain} m` : '+450 m';
-    const finalCal = calories > 0 ? `${calories} cal` : '577 cal';
+    // Khớp 100% số km thực tế đã ghi
+    const finalDist = `${distanceKm.toFixed(2)} km`;
+    const finalDur = formatDuration(elapsedSeconds);
+    const finalElev = `+${elevationGain} m`;
+    const finalCal = `${calories} cal`;
 
     setSessionStatus('idle');
     onSaveTrackSession({
@@ -325,245 +331,44 @@ export const TrackTab: React.FC<TrackTabProps> = ({
         </div>
       ) : (
         /* ========================================================================= */
-        /* 2. MÀN HÌNH ĐANG GHI HÀNH TRÌNH THỰC TẾ (KHI status === 'recording' | 'paused') */
+        /* 2. MÀN HÌNH ĐANG GHI HÀNH TRÌNH (TUÂN THỦ 100% DESIGN.MD MỤC 4.3 & TOKENS) */
         /* ========================================================================= */
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6 space-y-4">
-            {/* Screen Heading */}
-            <div className="flex items-start justify-between pt-1">
-              <div>
-                <div className="text-[10px] tracking-widest font-bold text-[#38764B] uppercase flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${sessionStatus === 'recording' ? 'bg-[#4ADE80] animate-ping' : 'bg-[#F2B832]'}`}></span>
-                  <span>{sessionStatus === 'recording' ? 'ĐANG GHI HÀNH TRÌNH' : 'ĐANG TẠM DỪNG'} · {activeActObj.name.toUpperCase()}</span>
-                </div>
-                <h1 className="text-2xl font-black text-white mt-0.5">{activeRouteObj.name}</h1>
-              </div>
-              <button
-                onClick={() => alert('Tùy chọn: Tạm ngắt GPS, Đổi đơn vị dặm/km, Cài đặt cảnh báo nhịp tim')}
-                className="p-2.5 rounded-xl bg-[#1B221D] border border-[#2E3B32] text-[#A5B4A8] hover:text-white"
-              >
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-
-            {/* Topographic Map (Bidoup Núi Bà GPS ±5m) */}
-            <div>
-              <LeafletMap
-                height="220px"
-                placeName={activeRouteObj.name}
-                summitAltitude="2,287m"
-                routeNote={sessionStatus === 'recording' ? 'Đang theo dõi vị trí GPS trực tiếp' : 'Tạm dừng ghi'}
-                waypoints={waypoints}
-                enableRealGps={true}
-              />
-            </div>
-
-            {/* Live Expedition Metrics Grid 2x2 */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Distance */}
-              <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-3.5 shadow-md">
-                <div className="text-[11px] font-semibold text-[#A5B4A8]">Quãng đường (Distance)</div>
-                <div className="text-2xl font-black text-white mt-1">
-                  {distanceKm.toFixed(2)} <span className="text-xs font-normal text-[#A5B4A8]">km</span>
-                </div>
-              </div>
-
-              {/* Duration */}
-              <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-3.5 shadow-md">
-                <div className="text-[11px] font-semibold text-[#A5B4A8]">Thời gian (Duration)</div>
-                <div className="text-2xl font-black text-white font-mono mt-1">
-                  {formatDuration(elapsedSeconds)}
-                </div>
-              </div>
-
-              {/* Elevation gain */}
-              <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-3.5 shadow-md">
-                <div className="text-[11px] font-semibold text-[#A5B4A8]">Độ cao tích lũy</div>
-                <div className="text-2xl font-black text-[#4ADE80] mt-1">
-                  +{elevationGain} <span className="text-xs font-normal text-[#A5B4A8]">m</span>
-                </div>
-              </div>
-
-              {/* Calories / Heart rate */}
-              <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-3.5 shadow-md">
-                <div className="text-[11px] font-semibold text-[#A5B4A8]">Calo / Nhịp tim</div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-black text-white">{calories}</span>
-                  <span className="text-xs font-bold text-[#E04838] flex items-center gap-0.5">
-                    ♥ {heartRate} <span className="text-[10px] text-[#A5B4A8]">bpm</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic Elevation Profile */}
-            <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-4 shadow-md space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Elevation profile</span>
-                <span className="font-mono text-[#F2B832] font-semibold">1,842 m</span>
-              </div>
-
-              {/* Profile Chart Graphic */}
-              <div className="h-16 w-full relative">
-                <svg className="w-full h-full" viewBox="0 0 300 60" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="liveProfileGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38764B" stopOpacity="0.7" />
-                      <stop offset="100%" stopColor="#38764B" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M0 50 Q 50 45, 100 35 T 200 20 T 260 12 L 300 8 L 300 60 L 0 60 Z"
-                    fill="url(#liveProfileGrad)"
-                  />
-                  <path
-                    d="M0 50 Q 50 45, 100 35 T 200 20 T 260 12 L 300 8"
-                    fill="none"
-                    stroke="#4ADE80"
-                    strokeWidth="2.5"
-                  />
-                </svg>
-              </div>
-
-              <div className="flex justify-between text-[10px] font-mono text-[#A5B4A8]">
-                <span>0 km</span>
-                <span className="text-[#4ADE80] font-bold">Hiện tại: {distanceKm.toFixed(2)} km</span>
-              </div>
-            </div>
-
-            {/* Mark Waypoints ("Mark the moment") */}
-            <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-4 space-y-3 shadow-md">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-white">Ghim điểm quan trọng</h2>
-                <span className="text-xs text-[#A5B4A8]">1 chạm đánh dấu</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleAddWaypoint('water')}
-                  className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-[#121613] border border-[#2E3B32] hover:border-[#2563EB] text-white transition-all active:scale-95"
-                >
-                  <div className="p-2 rounded-full bg-[#2563EB]/20 text-[#60A5FA]">
-                    <Droplets size={18} />
-                  </div>
-                  <span className="text-xs font-bold">Nguồn nước</span>
-                </button>
-
-                <button
-                  onClick={() => handleAddWaypoint('camp')}
-                  className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-[#121613] border border-[#2E3B32] hover:border-[#D97706] text-white transition-all active:scale-95"
-                >
-                  <div className="p-2 rounded-full bg-[#D97706]/20 text-[#FBBF24]">
-                    <Tent size={18} />
-                  </div>
-                  <span className="text-xs font-bold">Điểm lều</span>
-                </button>
-
-                <button
-                  onClick={() => handleAddWaypoint('photo')}
-                  className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-[#121613] border border-[#2E3B32] hover:border-[#059669] text-white transition-all active:scale-95"
-                >
-                  <div className="p-2 rounded-full bg-[#059669]/20 text-[#34D399]">
-                    <Camera size={18} />
-                  </div>
-                  <span className="text-xs font-bold">View đẹp</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Weather & Caution Pill */}
-            <div className="bg-[#1B221D] border border-[#2E3B32] rounded-2xl p-4 space-y-2.5 shadow-md">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <CloudRain size={20} className="text-[#60A5FA]" />
-                  <span className="text-lg font-bold text-white">26°C</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-white">75% rain in next 2h</div>
-                  <div className="text-[10px] text-[#A5B4A8]">Dự báo Bidoup</div>
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#C2562B]/20 border border-[#C2562B]/40 flex items-center gap-2 text-xs text-[#F87171]">
-                <AlertTriangle size={16} className="shrink-0" />
-                <span className="font-medium">Đoạn km 5 dốc trơn trượt. Chú ý bước chân.</span>
-              </div>
-            </div>
-
-            {/* Trail Toolkit */}
-            <div className="space-y-2.5">
-              <h2 className="text-sm font-bold text-white">Hộp công cụ dã ngoại</h2>
-
-              <div
-                onClick={onOpenAILens}
-                className="p-3.5 bg-[#1B221D] border border-[#2E3B32] rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#4ADE80] transition-all shadow-md group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-[#38764B]/20 text-[#4ADE80] group-hover:scale-110 transition-transform">
-                    <ScanLine size={20} />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">AI Flora / Fauna Lens</div>
-                    <div className="text-[11px] text-[#A5B4A8]">Quét nhận diện thực vật, nấm độc</div>
-                  </div>
-                </div>
-                <ArrowUpRight size={16} className="text-[#A5B4A8] group-hover:text-white" />
-              </div>
-
-              <div
-                onClick={onOpenGearCalculator}
-                className="p-3.5 bg-[#1B221D] border border-[#2E3B32] rounded-2xl space-y-2.5 cursor-pointer hover:border-[#F2B832] transition-all shadow-md"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-[#F2B832]/20 text-[#F2B832]">
-                      <Backpack size={18} />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">Gear weight calculator</div>
-                      <div className="text-[11px] text-[#F2B832] font-mono font-semibold">6.4 kg base weight</div>
-                    </div>
-                  </div>
-                  <ArrowUpRight size={16} className="text-[#A5B4A8]" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* DOCKED CONTROLS WHEN RECORDING */}
-          <div className="p-3 bg-[#121613] border-t border-[#2E3B32] z-30 shrink-0">
-            <div className="p-1.5 bg-[#1B221D] border border-[#2E3B32] rounded-2xl flex items-center gap-2 shadow-xl">
-              <button
-                onClick={() => setSessionStatus(sessionStatus === 'recording' ? 'paused' : 'recording')}
-                className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  sessionStatus === 'recording'
-                    ? 'bg-[#252F28] hover:bg-[#2E3B32] text-white'
-                    : 'bg-[#4ADE80] text-black shadow-lg shadow-[#4ADE80]/20'
-                }`}
-              >
-                {sessionStatus === 'recording' ? (
-                  <>
-                    <Pause size={16} />
-                    <span>Tạm dừng (Pause)</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={16} />
-                    <span>Tiếp tục (Resume)</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleFinish}
-                className="py-3 px-6 rounded-xl bg-[#E04838] hover:bg-[#c93c2d] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-[#E04838]/20 transition-all"
-              >
-                <Square size={14} />
-                <span>Kết thúc (Finish)</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <ActiveTripRecording
+          elapsedSeconds={elapsedSeconds}
+          distanceKm={distanceKm}
+          elevationGain={elevationGain}
+          calories={calories}
+          heartRate={heartRate}
+          isPaused={sessionStatus === 'paused'}
+          waypoints={waypoints}
+          trailName={activeRouteObj.name}
+          hardware={hardware || {
+            connected: true,
+            deviceName: 'SolarBag Pro',
+            edition: 'EXPEDITION / 30L',
+            serial: 'SN SBP-26-DEMO',
+            batteryLevel: 78,
+            chargingState: 'CHARGING',
+            solarInputWatts: 5.2,
+            topPillWatts: 4.2,
+            dailyWhHarvested: 32.5,
+            targetWh: 50.0,
+            lampState: 'OFF',
+            brightness: 60,
+            sosFlashActive: false,
+            bleDistanceMeters: 12,
+            bleDirection: 'NE · 45°',
+            lastSeen: 'Just now',
+            nfcRegistered: true,
+            healthPercent: 98,
+          }}
+          onTogglePause={() => setSessionStatus(sessionStatus === 'recording' ? 'paused' : 'recording')}
+          onFinish={handleFinish}
+          onAddWaypoint={handleAddWaypoint}
+          onOpenAILens={onOpenAILens}
+          onOpenGearCalculator={onOpenGearCalculator}
+          onUpdateHardware={onUpdateHardware}
+        />
       )}
     </div>
   );

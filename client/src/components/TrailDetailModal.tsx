@@ -12,8 +12,14 @@ export const TrailDetailModal: React.FC<TrailDetailModalProps> = ({ trail, onClo
   if (!trail) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-md max-h-[90vh] bg-[#1B221D] border border-[#2E3B32] rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95">
+    <div
+      onClick={onClose}
+      className="absolute inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-xs animate-in fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-h-[92%] bg-[#1B221D] border border-[#2E3B32] rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95"
+      >
         {/* Photo Header */}
         <div className="relative h-48 w-full bg-[#121613] overflow-hidden">
           <img 

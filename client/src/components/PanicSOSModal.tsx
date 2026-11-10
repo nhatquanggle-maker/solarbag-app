@@ -21,7 +21,7 @@ export const PanicSOSModal: React.FC<PanicSOSModalProps> = ({ isOpen, onClose, c
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#E04838]/95 backdrop-blur-md animate-in fade-in select-none text-white">
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-[#E04838]/95 backdrop-blur-md animate-in fade-in select-none text-white">
       <div className="w-full max-w-sm bg-[#121613] border-2 border-white rounded-3xl p-6 text-center shadow-2xl animate-in zoom-in-95">
         <div className="w-16 h-16 rounded-full bg-[#E04838] flex items-center justify-center mx-auto mb-4 animate-bounce">
           <AlertTriangle size={36} className="text-white" />

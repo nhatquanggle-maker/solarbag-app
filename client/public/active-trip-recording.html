@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SolarBag OS — Màn Hành Trình Đang Ghi (iPhone 16 Pro)</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ========================================================================= */
+    /* 1. DESIGN TOKENS (Theo Mục 2 - design.md) */
+    /* ========================================================================= */
+    :root {
+      /* Thương hiệu: xanh lá */
+      --primary:        #16A34A;  /* đồ họa: vòng pin, thanh tiến độ, đường biểu đồ, chấm trạng thái, icon tab active */
+      --primary-deep:   #15803D;  /* nền nút chính, FAB, chữ/link xanh trên nền trắng */
+      --on-primary:     #FFFFFF;  /* chữ và icon trên nền --primary-deep */
+      --primary-soft:   #EAF6EE;  /* nền chip, banner, gradient đầu trang */
+
+      /* An toàn: CHỈ dùng cho SOS, té ngã, cảnh báo nguy hiểm */
+      --danger:         #DC2626;
+      --danger-soft:    #FEE9E9;
+
+      /* Cảnh báo nhẹ (địa hình trơn, mưa): chỉ dùng cho chip cảnh báo */
+      --warning:        #B45309;
+      --warning-soft:   #FFF4DC;
+
+      /* Nền và chữ: trắng chiếm ưu thế (Tỉ lệ 90/8/2) */
+      --bg:             #FFFFFF;
+      --surface:        #F7F8F7;  /* nền card, input (xám rất nhạt, hơi ngả xanh) */
+      --border:         #ECEEEC;
+      --text:           #16211A;  /* đen ngả xanh đậm, dễ chịu hơn đen thuần */
+      --subtext:        #7A857E;
+      --disabled:       #C9D0CB;
+
+      /* Spacing */
+      --space-1: 4px;   --space-2: 8px;   --space-3: 12px;
+      --space-4: 16px;  --space-5: 24px;  --space-6: 32px;
+
+      /* Radius */
+      --radius-s: 10px;   /* chip */
+      --radius-m: 14px;   /* input, nút */
+      --radius-l: 20px;   /* card */
+      --radius-xl: 28px;  /* bottom sheet */
+
+      /* Shadows */
+      --shadow-float: 0 8px 24px rgba(22, 33, 26, 0.08); /* CHỈ cho FAB và bottom sheet */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #E2E6E3;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      user-select: none;
+    }
+
+    /* Khung thiết kế iPhone 16 Pro (393 × 852) */
+    .device-frame {
+      width: 393px;
+      height: 852px;
+      background: var(--bg);
+      border-radius: 54px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 60px -15px rgba(22, 33, 26, 0.25), 0 0 0 10px #1E2420;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 124px;
+      height: 35px;
+      background: #000000;
+      border-radius: 20px;
+      z-index: 100;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 10;
+    }
+
+    .status-bar-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Top Bar & Hardware Pill */
+    .top-bar {
+      padding: 6px 20px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 10;
+    }
+
+    .top-bar-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .top-bar-title .subtitle {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--subtext);
+    }
+
+    /* Hardware Pill (Chỉ 2 phần tử: Pin + 78%, Chấm trạng thái) */
+    .hardware-pill {
+      height: 32px;
+      padding: 0 12px;
+      background: var(--surface);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s ease-out;
+    }
+
+    .hardware-pill:hover {
+      background: var(--border);
+    }
+
+    .hardware-pill-battery {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary); /* Xanh lá = đang sạc nắng */
+    }
+
+    /* Vùng nội dung chính (Ngân sách: 3 số + 1 nút) */
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px 20px 16px;
+      overflow-y: auto;
+    }
+
+    /* 1. Chip cảnh báo thời tiết / địa hình (Một chip vàng nhạt) */
+    .warning-chip {
+      width: 100%;
+      height: 34px;
+      padding: 0 12px;
+      background: var(--warning-soft);
+      border-radius: var(--radius-s);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--warning);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s ease-out;
+    }
+
+    .warning-chip:hover {
+      background: #FDECC8;
+    }
+
+    .warning-chip-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 2. Ba số Hero (Display: 40/700, tabular-nums) */
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      text-align: center;
+      padding: 16px 0;
+      margin: auto 0;
+    }
+
+    .metric-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .metric-col.center-col {
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+
+    .metric-value {
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-label {
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtext);
+    }
+
+    .metric-unit {
+      font-size: 11px;
+      color: var(--subtext);
+    }
+
+    /* 3. Biểu đồ cao độ mảnh (Một đường duy nhất màu --primary) */
+    .elevation-card {
+      background: var(--surface);
+      border-radius: var(--radius-l);
+      padding: 16px;
+    }
+
+    .elevation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .elevation-title {
+      font-weight: 500;
+      color: var(--subtext);
+    }
+
+    .elevation-current {
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .elevation-svg-wrap {
+      width: 100%;
+      height: 68px;
+    }
+
+    .elevation-svg-wrap svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .elevation-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--subtext);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .elevation-footer .active-loc {
+      color: var(--primary-deep);
+      font-weight: 600;
+    }
+
+    /* 4. Hàng 3 nút ghim nhanh (Nước · Lều · Viewpoint, Lucide, không emoji) */
+    .quick-mark-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 36px;
+      padding: 8px 0;
+    }
+
+    .mark-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mark-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+    }
+
+    .mark-btn:hover {
+      background: var(--border);
+    }
+
+    .mark-btn:active {
+      transform: scale(0.94);
+    }
+
+    .mark-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtext);
+    }
+
+    /* 5. Nút Dừng (Secondary to, giữ để kết thúc) & Nút Tạm dừng */
+    .controls-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-pause {
+      height: 52px;
+      min-width: 52px;
+      padding: 0 18px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-m);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s ease-out;
+    }
+
+    .btn-pause:active {
+      background: var(--surface);
+    }
+
+    .btn-pause.is-paused {
+      background: var(--primary-soft);
+      color: var(--primary-deep);
+      border-color: rgba(22, 163, 74, 0.25);
+    }
+
+    .btn-stop-hold {
+      flex: 1;
+      height: 52px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-m);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.15s ease-out;
+    }
+
+    .btn-stop-hold:active {
+      background: var(--surface);
+    }
+
+    .hold-progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--danger-soft);
+      transition: width 0.1s linear;
+      pointer-events: none;
+    }
+
+    .btn-stop-hold.holding {
+      border-color: var(--danger);
+    }
+
+    .btn-stop-hold.holding .stop-text {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .detail-ghost-link {
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    .btn-ghost-detail {
+      background: transparent;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary-deep);
+      cursor: pointer;
+      padding: 4px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-ghost-detail:hover {
+      text-decoration: underline;
+    }
+
+    /* Bottom Tab Bar (Mục 3 - design.md) */
+    .tab-bar {
+      height: 64px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      position: relative;
+      padding-bottom: 8px;
+      z-index: 20;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--subtext);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      flex: 1;
+    }
+
+    .tab-item.active {
+      color: var(--primary);
+    }
+
+    /* FAB Tròn nhô lên 12px ở giữa (Nền --primary-deep) */
+    .fab-center-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .fab-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary-deep);
+      color: var(--on-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-float);
+      border: none;
+      cursor: pointer;
+      margin-top: -24px;
+      transition: transform 0.15s ease-out;
+    }
+
+    .fab-btn:active {
+      transform: scale(0.95);
+    }
+
+    .fab-label {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* Home Indicator */
+    .home-indicator {
+      width: 140px;
+      height: 5px;
+      background: #000000;
+      border-radius: 10px;
+      margin: 6px auto 8px;
+    }
+
+    /* ========================================================================= */
+    /* BOTTOM SHEET (Mục 3: Radius 28px, handle 36x4, --shadow-float, nền trắng) */
+    /* ========================================================================= */
+    .bottom-sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 200;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .bottom-sheet-backdrop.active {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      opacity: 1;
+    }
+
+    .bottom-sheet {
+      background: var(--bg);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      box-shadow: var(--shadow-float);
+      padding: 16px 24px 28px;
+      transform: translateY(100%);
+      transition: transform 0.28s ease-out;
+    }
+
+    .bottom-sheet-backdrop.active .bottom-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 999px;
+      margin: 0 auto 16px;
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .sheet-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .sheet-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--subtext);
+      cursor: pointer;
+    }
+
+    .metric-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .sheet-card {
+      background: var(--surface);
+      border-radius: var(--radius-l);
+      padding: 14px 16px;
+    }
+
+    .sheet-card-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtext);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sheet-card-val {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sheet-card-val span {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--subtext);
+    }
+
+    /* Toast */
+    .toast-pill {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: var(--radius-m);
+      font-size: 13px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 150;
+      box-shadow: var(--shadow-float);
+    }
+
+    .toast-pill.show {
+      display: flex;
+      animation: fadeInDown 0.2s ease-out;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translate(-50%, -8px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KHUNG IPHONE 16 PRO (393 × 852) -->
+  <div class="device-frame">
+    <!-- Dynamic Island -->
+    <div class="dynamic-island"></div>
+
+    <!-- Status Bar (9:41) -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-bar-icons">
+        <!-- Cellular -->
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none">
+          <rect x="0.5" y="7" width="2.5" height="4" rx="0.75" fill="#16211A"/>
+          <rect x="4.5" y="5" width="2.5" height="6" rx="0.75" fill="#16211A"/>
+          <rect x="8.5" y="3" width="2.5" height="8" rx="0.75" fill="#16211A"/>
+          <rect x="12.5" y="0.5" width="2.5" height="10.5" rx="0.75" fill="#16211A"/>
+        </svg>
+        <!-- Wifi -->
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+          <path d="M7.5 10.5C8.05228 10.5 8.5 10.0523 8.5 9.5C8.5 8.94772 8.05228 8.5 7.5 8.5C6.94772 8.5 6.5 8.94772 6.5 9.5C6.5 10.0523 6.94772 10.5 7.5 10.5Z" fill="#16211A"/>
+          <path d="M4.5 7C5.35 6.15 6.35 5.7 7.5 5.7C8.65 5.7 9.65 6.15 10.5 7" stroke="#16211A" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M2 4.2C3.5 2.7 5.4 1.8 7.5 1.8C9.6 1.8 11.5 2.7 13 4.2" stroke="#16211A" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <!-- Battery -->
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none">
+          <rect x="0.75" y="0.75" width="20" height="10.5" rx="3.25" stroke="#16211A" stroke-width="1.5"/>
+          <rect x="2.5" y="2.5" width="14" height="7" rx="1.5" fill="#16211A"/>
+          <path d="M22 4.5V7.5" stroke="#16211A" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Top Bar: Tiêu đề màn hình + Hardware Pill -->
+    <div class="top-bar">
+      <div class="top-bar-title">
+        <div class="subtitle" id="statusHeader">Đang ghi</div>
+        <h1>Bidoup Núi Bà</h1>
+      </div>
+
+      <!-- Hardware Pill (Chỉ 2 phần tử: Icon pin + 78%, Chấm trạng thái sạc xanh lá) -->
+      <button class="hardware-pill" onclick="openSheet('hardwareSheet')" aria-label="Balo SolarBag">
+        <div class="hardware-pill-battery">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="16" height="10" x="2" y="7" rx="2" ry="2"/>
+            <line x1="22" x2="22" y1="11" y2="13"/>
+          </svg>
+          <span id="pillBatteryText">78%</span>
+        </div>
+        <div class="status-dot"></div>
+      </button>
+    </div>
+
+    <!-- Toast thông báo ghim nhanh -->
+    <div class="toast-pill" id="quickToast">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span id="toastText">Đã ghim vị trí</span>
+    </div>
+
+    <!-- KHÔNG GIAN NỘI DUNG CHÍNH (Tuân thủ ngân sách: 3 số + 1 nút) -->
+    <div class="content-area">
+      <!-- 1. Chip cảnh báo nhẹ: một chip vàng nhạt trên cùng khi có -->
+      <button class="warning-chip" onclick="openSheet('alertSheet')">
+        <div class="warning-chip-left">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Mưa 75% · km 5 trơn trượt</span>
+        </div>
+        <span style="font-size: 11px; opacity: 0.85;">Chi tiết</span>
+      </button>
+
+      <!-- 2. Ba số Hero (Display 40/700 chia 3 cột: Cự ly · Thời gian · Độ cao) -->
+      <div class="hero-metrics">
+        <div class="metric-col">
+          <div class="metric-value" id="distVal">14.2</div>
+          <div class="metric-label">Cự ly <span class="metric-unit">(km)</span></div>
+        </div>
+
+        <div class="metric-col center-col">
+          <div class="metric-value" id="timeVal">02:45</div>
+          <div class="metric-label">Thời gian</div>
+        </div>
+
+        <div class="metric-col">
+          <div class="metric-value" id="elevVal">+850</div>
+          <div class="metric-label">Độ cao <span class="metric-unit">(m)</span></div>
+        </div>
+      </div>
+
+      <!-- 3. Biểu đồ cao độ mảnh (Một đường duy nhất màu --primary #16A34A) -->
+      <div class="elevation-card">
+        <div class="elevation-header">
+          <span class="elevation-title">Trắc diện cao độ</span>
+          <span class="elevation-current">2,050 m</span>
+        </div>
+
+        <div class="elevation-svg-wrap">
+          <svg viewBox="0 0 320 64" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="profileGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#16A34A" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#16A34A" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Vùng mờ siêu nhẹ -->
+            <path d="M 0 54 Q 50 46, 100 40 T 180 26 T 250 18 L 320 10 L 320 64 L 0 64 Z" fill="url(#profileGrad)" />
+
+            <!-- Đường mảnh duy nhất màu --primary -->
+            <path d="M 0 54 Q 50 46, 100 40 T 180 26 T 250 18 L 320 10" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" />
+
+            <!-- Điểm vị trí hiện tại -->
+            <circle cx="250" cy="18" r="4.5" fill="#15803D" stroke="#FFFFFF" stroke-width="2" />
+          </svg>
+        </div>
+
+        <div class="elevation-footer">
+          <span>0 km</span>
+          <span class="active-loc">Đang ở km 14.2</span>
+          <span>14.2 km</span>
+        </div>
+      </div>
+
+      <!-- 4. Hàng 3 nút tròn ghim nhanh (Nước · Lều · Viewpoint, Lucide, không emoji) -->
+      <div class="quick-mark-row">
+        <!-- Nước -->
+        <div class="mark-item">
+          <button class="mark-btn" onclick="triggerMark('nguồn nước')" aria-label="Ghim nguồn nước">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m12 2.69 5.66 5.66a8 8 0 1 1-11.31 0z"/>
+            </svg>
+          </button>
+          <span class="mark-label">Nước</span>
+        </div>
+
+        <!-- Lều -->
+        <div class="mark-item">
+          <button class="mark-btn" onclick="triggerMark('điểm cắm trại')" aria-label="Ghim bãi hạ lều">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 20 10 4 1 20h18Z"/>
+              <path d="m10 4 9 16"/>
+              <path d="M14 20h7"/>
+            </svg>
+          </button>
+          <span class="mark-label">Lều</span>
+        </div>
+
+        <!-- Viewpoint -->
+        <div class="mark-item">
+          <button class="mark-btn" onclick="triggerMark('điểm ngắm cảnh')" aria-label="Ghim điểm ngắm cảnh">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+          </button>
+          <span class="mark-label">Viewpoint</span>
+        </div>
+      </div>
+
+      <!-- 5. Nút Dừng (Secondary, to ở dưới - Giữ để kết thúc) & Tạm dừng -->
+      <div>
+        <div class="controls-row">
+          <button class="btn-pause" id="btnPause" onclick="togglePause()">
+            <svg id="pauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="4" height="16" x="6" y="4"/>
+              <rect width="4" height="16" x="14" y="4"/>
+            </svg>
+            <span id="pauseLabel">Tạm dừng</span>
+          </button>
+
+          <button class="btn-stop-hold" id="btnStop" aria-label="Nhấn giữ để kết thúc hành trình">
+            <div class="hold-progress-fill" id="holdFill"></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A857E" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="position: relative; z-index: 2;">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+            </svg>
+            <span class="stop-text" id="stopLabel" style="position: relative; z-index: 2;">Giữ để dừng</span>
+          </button>
+        </div>
+
+        <div class="detail-ghost-link">
+          <button class="btn-ghost-detail" onclick="openSheet('detailSheet')">
+            <span>Xem chi tiết calo & nhịp tim</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tab Bar (5 mục: Khám phá · Cộng đồng · [Hành trình] · Balo tôi · Hồ sơ) -->
+    <nav class="tab-bar">
+      <!-- Tab 1 -->
+      <a class="tab-item" href="javascript:void(0)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+        </svg>
+        <span>Khám phá</span>
+      </a>
+
+      <!-- Tab 2 -->
+      <a class="tab-item" href="javascript:void(0)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Cộng đồng</span>
+      </a>
+
+      <!-- Tab 3 (Giữa: FAB Tròn nổi 56px nền --primary-deep) -->
+      <div class="fab-center-wrap">
+        <button class="fab-btn" aria-label="Hành trình">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+          </svg>
+        </button>
+        <span class="fab-label">Hành trình</span>
+      </div>
+
+      <!-- Tab 4 -->
+      <a class="tab-item" href="javascript:void(0)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
+          <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+          <path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"/>
+        </svg>
+        <span>Balo tôi</span>
+      </a>
+
+      <!-- Tab 5 -->
+      <a class="tab-item" href="javascript:void(0)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Hồ sơ</span>
+      </a>
+    </nav>
+
+    <!-- Home Indicator -->
+    <div class="home-indicator"></div>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM SHEET 1: CHI TIẾT HÀNH TRÌNH (Ẩn trước, mở sau: calo, nhịp tim) -->
+    <!-- ===================================================================== -->
+    <div class="bottom-sheet-backdrop" id="detailSheet">
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-title">Chi tiết chỉ số dã ngoại</div>
+          <button class="sheet-close-btn" onclick="closeSheet('detailSheet')">✕</button>
+        </div>
+
+        <div class="metric-grid-2x2">
+          <div class="sheet-card">
+            <div class="sheet-card-label">Năng lượng tiêu hao</div>
+            <div class="sheet-card-val">577 <span>kcal</span></div>
+          </div>
+          <div class="sheet-card">
+            <div class="sheet-card-label">Nhịp tim hiện tại</div>
+            <div class="sheet-card-val">128 <span>bpm</span></div>
+          </div>
+          <div class="sheet-card">
+            <div class="sheet-card-label">Tốc độ trung bình</div>
+            <div class="sheet-card-val">3.4 <span>km/h</span></div>
+          </div>
+          <div class="sheet-card">
+            <div class="sheet-card-label">Tọa độ GPS</div>
+            <div class="sheet-card-val" style="font-size: 14px; font-weight: 600; padding-top: 4px;">12.0945° N<br>108.6472° E</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM SHEET 2: CHI TIẾT CẢNH BÁO THỜI TIẾT & ĐỊA HÌNH -->
+    <!-- ===================================================================== -->
+    <div class="bottom-sheet-backdrop" id="alertSheet">
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-title">Cảnh báo an toàn cung đường</div>
+          <button class="sheet-close-btn" onclick="closeSheet('alertSheet')">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <div style="background: var(--warning-soft); padding: 14px 16px; border-radius: var(--radius-m);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--warning); margin-bottom: 4px;">Khả năng mưa 75% trong 2 giờ tới</div>
+            <div style="font-size: 13px; color: var(--subtext); line-height: 1.5;">Đám mây ẩm đang tích tụ trên sườn Tây Bidoup. Nhiệt độ dự kiến giảm xuống 19°C. Khuyến nghị chuẩn bị áo mưa dã ngoại và bọc chống nước balo.</div>
+          </div>
+
+          <div style="background: var(--surface); padding: 14px 16px; border-radius: var(--radius-m);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Đoạn km 5: Dốc đất trơn trượt</div>
+            <div style="font-size: 13px; color: var(--subtext); line-height: 1.5;">Độ ẩm rừng 90%, có rêu trơn và rễ cây lộ thiên. Hãy dùng gậy leo núi khi xuống dốc.</div>
+          </div>
+        </div>
+
+        <button onclick="closeSheet('alertSheet')" style="width: 100%; height: 52px; background: var(--primary-deep); color: white; border: none; border-radius: var(--radius-m); font-size: 15px; font-weight: 600; cursor: pointer;">
+          Đã hiểu
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM SHEET 3: ĐIỀU KHIỂN NHANH BALO (Mở từ Hardware Pill) -->
+    <!-- ===================================================================== -->
+    <div class="bottom-sheet-backdrop" id="hardwareSheet">
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div>
+            <div style="font-size: 11px; font-weight: 500; color: var(--subtext); text-transform: uppercase;">Thiết bị kết nối</div>
+            <div class="sheet-title">SolarBag Pro</div>
+          </div>
+          <button class="sheet-close-btn" onclick="closeSheet('hardwareSheet')">✕</button>
+        </div>
+
+        <div class="metric-grid-2x2">
+          <div class="sheet-card">
+            <div class="sheet-card-label">Mức pin</div>
+            <div class="sheet-card-val">78%</div>
+            <div style="font-size: 11px; font-weight: 500; color: var(--primary-deep); margin-top: 2px;">Đang sạc nắng</div>
+          </div>
+          <div class="sheet-card">
+            <div class="sheet-card-label">Công suất sạc</div>
+            <div class="sheet-card-val">+5.2 <span>W</span></div>
+            <div style="font-size: 11px; font-weight: 500; color: var(--subtext); margin-top: 2px;">Tích lũy 32.5 Wh</div>
+          </div>
+        </div>
+
+        <div style="background: var(--surface); border-radius: var(--radius-l); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--text);">Đèn dã ngoại BLE</div>
+            <div style="font-size: 13px; color: var(--subtext);" id="lampStatusText">Đang tắt</div>
+          </div>
+          <button onclick="toggleLamp()" id="lampToggleBtn" style="width: 52px; height: 32px; border-radius: 999px; background: var(--disabled); border: none; padding: 2px; cursor: pointer; transition: background 0.2s;">
+            <div id="lampThumb" style="width: 28px; height: 28px; border-radius: 50%; background: white; transition: transform 0.2s;"></div>
+          </button>
+        </div>
+
+        <button onclick="closeSheet('hardwareSheet')" style="width: 100%; height: 52px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-m); font-size: 15px; font-weight: 600; cursor: pointer;">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sheet Controller
+    function openSheet(id) {
+      const sheet = document.getElementById(id);
+      if (sheet) sheet.classList.add('active');
+    }
+
+    function closeSheet(id) {
+      const sheet = document.getElementById(id);
+      if (sheet) sheet.classList.remove('active');
+    }
+
+    // Ghim nhanh 1 chạm + Toast
+    function triggerMark(label) {
+      const toast = document.getElementById('quickToast');
+      const text = document.getElementById('toastText');
+      text.textContent = 'Đã ghim ' + label;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    // Tạm dừng / Tiếp tục
+    let isPaused = false;
+    function togglePause() {
+      isPaused = !isPaused;
+      const btn = document.getElementById('btnPause');
+      const label = document.getElementById('pauseLabel');
+      const header = document.getElementById('statusHeader');
+      if (isPaused) {
+        btn.classList.add('is-paused');
+        label.textContent = 'Tiếp tục';
+        header.textContent = 'Tạm dừng';
+      } else {
+        btn.classList.remove('is-paused');
+        label.textContent = 'Tạm dừng';
+        header.textContent = 'Đang ghi';
+      }
+    }
+
+    // Nhấn giữ để dừng (Hold to Stop: 1.5s)
+    const btnStop = document.getElementById('btnStop');
+    const holdFill = document.getElementById('holdFill');
+    const stopLabel = document.getElementById('stopLabel');
+    let holdTimer = null;
+    let holdProgress = 0;
+
+    function startHold(e) {
+      e.preventDefault();
+      holdProgress = 0;
+      btnStop.classList.add('holding');
+      holdTimer = setInterval(() => {
+        holdProgress += 10;
+        holdFill.style.width = holdProgress + '%';
+        stopLabel.textContent = 'Giữ ' + Math.ceil((100 - holdProgress) / 33) + 's...';
+        if (holdProgress >= 100) {
+          clearInterval(holdTimer);
+          holdTimer = null;
+          stopLabel.textContent = 'Đã kết thúc!';
+          setTimeout(() => {
+            alert('Hành trình đã kết thúc và được lưu vào Sổ tay!');
+            resetHold();
+          }, 300);
+        }
+      }, 150);
+    }
+
+    function resetHold() {
+      if (holdTimer) {
+        clearInterval(holdTimer);
+        holdTimer = null;
+      }
+      btnStop.classList.remove('holding');
+      holdFill.style.width = '0%';
+      stopLabel.textContent = 'Giữ để dừng';
+    }
+
+    btnStop.addEventListener('mousedown', startHold);
+    btnStop.addEventListener('mouseup', resetHold);
+    btnStop.addEventListener('mouseleave', resetHold);
+    btnStop.addEventListener('touchstart', startHold);
+    btnStop.addEventListener('touchend', resetHold);
+
+    // Lamp Toggle in Quick Sheet
+    let lampOn = false;
+    function toggleLamp() {
+      lampOn = !lampOn;
+      const toggle = document.getElementById('lampToggleBtn');
+      const thumb = document.getElementById('lampThumb');
+      const text = document.getElementById('lampStatusText');
+      if (lampOn) {
+        toggle.style.background = 'var(--primary-deep)';
+        thumb.style.transform = 'translateX(20px)';
+        text.textContent = 'Đang bật (60%)';
+      } else {
+        toggle.style.background = 'var(--disabled)';
+        thumb.style.transform = 'translateX(0)';
+        text.textContent = 'Đang tắt';
+      }
+    }
+  </script>
+</body>
+</html>
+

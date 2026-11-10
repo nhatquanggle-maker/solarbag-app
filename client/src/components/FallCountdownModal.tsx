@@ -41,7 +41,7 @@ export const FallCountdownModal: React.FC<FallCountdownModalProps> = ({ isOpen, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
       <div className="w-full max-w-sm bg-[#1B221D] border-2 border-[#E04838] rounded-3xl p-6 text-center shadow-[0_0_50px_rgba(224,72,56,0.4)] animate-in zoom-in-95">
         <div className="flex items-center justify-center mb-4">
           <div className="relative flex items-center justify-center">

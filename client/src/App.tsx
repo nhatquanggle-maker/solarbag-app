@@ -14,6 +14,7 @@ import { GearChecklistModal } from './components/GearChecklistModal';
 import { AILensModal } from './components/AILensModal';
 import { FallCountdownModal } from './components/FallCountdownModal';
 import { PanicSOSModal } from './components/PanicSOSModal';
+import { SaveTripPostModal } from './components/SaveTripPostModal';
 
 import { HardwareState, Trail, FeedPost, CrewMember, Challenge, Trophy, EmergencyContact, FloraFaunaItem } from './types';
 import { Smartphone, Monitor } from 'lucide-react';
@@ -60,6 +61,14 @@ export function App() {
   const [aiLensOpen, setAiLensOpen] = useState(false);
   const [fallModalOpen, setFallModalOpen] = useState(false);
   const [panicSOSOpen, setPanicSOSOpen] = useState(false);
+  const [savePostModalOpen, setSavePostModalOpen] = useState(false);
+  const [finishedSession, setFinishedSession] = useState<{
+    distance: string;
+    duration: string;
+    elevation: string;
+    calories: string;
+    trailName?: string;
+  } | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number }>({ lat: 12.0945, lng: 108.6472 });
 
   // Fetch initial data from backend API
@@ -136,30 +145,40 @@ export function App() {
     }).catch(() => {});
   };
 
-  const handleSaveTrackSession = (session: { distance: string; duration: string; elevation: string; calories: string }) => {
-    const newPost: FeedPost = {
-      id: `post-${Date.now()}`,
-      author: {
-        name: 'Thanh Thảo',
-        avatar: '/assets/c3de37e21a9b752dc3aeac3312fa8fc13160c641.png',
-        location: 'Bidoup Núi Bà',
-        timeAgo: 'Just now'
-      },
-      caption: `Hoàn thành chuyến trek ${session.distance}! Nạp đầy năng lượng cùng SolarBag Pro ☀️🏕️`,
-      metrics: {
-        distance: session.distance,
-        elevation: session.elevation,
-        type: 'Trek'
-      },
-      photo: '/assets/9680546a9f58bc783a3080e0c17b964f703f4857.png',
-      mapPreview: 'Bidoup summit loop · GPS log',
-      likes: 1,
-      hasLiked: true,
-      comments: []
-    };
-    setPosts([newPost, ...posts]);
-    setActiveTab('community');
-    alert('Đã lưu hành trình và tự động chia sẻ lên Bảng tin Cộng Đồng SolarBag!');
+  const handleSaveTrackSession = (session: { distance: string; duration: string; elevation: string; calories: string; trailName?: string }) => {
+    // Lưu lại session chính xác với số km thực tế và mở modal hỏi trước khi đăng bài
+    setFinishedSession(session);
+    setSavePostModalOpen(true);
+  };
+
+  const handlePublishTripPost = (data: { caption: string; photo: string; location: string; shareToCommunity: boolean }) => {
+    if (!finishedSession) return;
+    if (data.shareToCommunity) {
+      const newPost: FeedPost = {
+        id: `post-${Date.now()}`,
+        author: {
+          name: 'Thanh Thảo',
+          avatar: '/assets/c3de37e21a9b752dc3aeac3312fa8fc13160c641.png',
+          location: data.location,
+          timeAgo: 'Vừa xong'
+        },
+        caption: data.caption,
+        metrics: {
+          distance: finishedSession.distance,
+          elevation: finishedSession.elevation,
+          type: 'Trek'
+        },
+        photo: data.photo,
+        mapPreview: `${data.location} · GPS trail log`,
+        likes: 1,
+        hasLiked: true,
+        comments: []
+      };
+      setPosts([newPost, ...posts]);
+      setActiveTab('community');
+    }
+    setSavePostModalOpen(false);
+    setFinishedSession(null);
   };
 
   const handleSendTestSms = () => {
@@ -221,12 +240,14 @@ export function App() {
         {/* Global iOS Status Bar */}
         <StatusBar />
 
-        {/* Global Hardware Floating Pill Component (Present on all screens) */}
-        <HardwarePill
-          hardware={hardware}
-          onUpdateHardware={handleUpdateHardware}
-          onNavigateToBagTab={() => setActiveTab('mybag')}
-        />
+        {/* Global Hardware Floating Pill Component (Present on other screens, Track Tab has dedicated design.md header) */}
+        {activeTab !== 'track' && (
+          <HardwarePill
+            hardware={hardware}
+            onUpdateHardware={handleUpdateHardware}
+            onNavigateToBagTab={() => setActiveTab('mybag')}
+          />
+        )}
 
         {/* Active Tab Screen Content */}
         {activeTab === 'explore' && (
@@ -256,6 +277,8 @@ export function App() {
             onOpenAILens={() => setAiLensOpen(true)}
             onOpenGearCalculator={() => setGearModalOpen(true)}
             onSaveTrackSession={handleSaveTrackSession}
+            hardware={hardware}
+            onUpdateHardware={handleUpdateHardware}
           />
         )}
 
@@ -280,74 +303,87 @@ export function App() {
           activeTab={activeTab}
           onChangeTab={(tab) => setActiveTab(tab)}
         />
+
+        {/* OVERLAY MODALS (ALL CONSTRAINED INSIDE THE IPHONE DEVICE FRAME) */}
+
+        {/* 1. Offline Maps Storage Modal */}
+        <OfflineModal
+          isOpen={offlineModalOpen}
+          onClose={() => setOfflineModalOpen(false)}
+        />
+
+        {/* 2. Trail Detail Modal */}
+        <TrailDetailModal
+          trail={selectedTrail}
+          onClose={() => setSelectedTrail(null)}
+          onStartTracking={(t) => {
+            setSelectedTrail(null);
+            setActiveTab('track');
+          }}
+        />
+
+        {/* 3. LighterPack Gear Weight Calculator Modal (NẰM 100% TRONG ĐIỆN THOẠI) */}
+        <GearChecklistModal
+          isOpen={gearModalOpen}
+          onClose={() => setGearModalOpen(false)}
+        />
+
+        {/* 4. AI Outdoor Lens Camera Modal (Figma 66:8669) */}
+        <AILensModal
+          isOpen={aiLensOpen}
+          onClose={() => setAiLensOpen(false)}
+          onSaveToDiary={(item: FloraFaunaItem) => {
+            const diaryPost: FeedPost = {
+              id: `post-${Date.now()}`,
+              author: {
+                name: 'Thanh Thảo',
+                avatar: '/assets/c3de37e21a9b752dc3aeac3312fa8fc13160c641.png',
+                location: 'Bidoup Núi Bà',
+                timeAgo: 'Vừa xong'
+              },
+              caption: `Vừa quét được loài thực vật: ${item.commonName} (${item.localName}). ${item.toxicity}`,
+              metrics: {
+                distance: '14.2 km',
+                elevation: '+850 m',
+                type: 'Flora Lens'
+              },
+              photo: '/assets/b52ba1f177c970ae590d50a017afbc0d4019f65b.png',
+              mapPreview: 'Bidoup · Tọa độ sinh thái',
+              likes: 1,
+              hasLiked: true,
+              comments: []
+            };
+            setPosts([diaryPost, ...posts]);
+          }}
+        />
+
+        {/* 5. Fall Detection 60-second Countdown Siren Modal */}
+        <FallCountdownModal
+          isOpen={fallModalOpen}
+          onClose={() => setFallModalOpen(false)}
+          onTriggerSOS={handleTriggerSOS}
+        />
+
+        {/* 6. Panic SOS Emergency Distress Modal */}
+        <PanicSOSModal
+          isOpen={panicSOSOpen}
+          onClose={() => setPanicSOSOpen(false)}
+          coordinates={userCoords}
+        />
+
+        {/* 7. Save & Post Trip Modal (Hỏi trước khi đăng, up ảnh, ghi nội dung) */}
+        {finishedSession && (
+          <SaveTripPostModal
+            isOpen={savePostModalOpen}
+            onClose={() => {
+              setSavePostModalOpen(false);
+              setFinishedSession(null);
+            }}
+            sessionData={finishedSession}
+            onPublish={handlePublishTripPost}
+          />
+        )}
       </div>
-
-      {/* OVERLAY MODALS */}
-
-      {/* 1. Offline Maps Storage Modal */}
-      <OfflineModal
-        isOpen={offlineModalOpen}
-        onClose={() => setOfflineModalOpen(false)}
-      />
-
-      {/* 2. Trail Detail Modal */}
-      <TrailDetailModal
-        trail={selectedTrail}
-        onClose={() => setSelectedTrail(null)}
-        onStartTracking={(t) => {
-          setSelectedTrail(null);
-          setActiveTab('track');
-        }}
-      />
-
-      {/* 3. LighterPack Gear Weight Calculator Modal */}
-      <GearChecklistModal
-        isOpen={gearModalOpen}
-        onClose={() => setGearModalOpen(false)}
-      />
-
-      {/* 4. AI Outdoor Lens Camera Modal (Figma 66:8669) */}
-      <AILensModal
-        isOpen={aiLensOpen}
-        onClose={() => setAiLensOpen(false)}
-        onSaveToDiary={(item: FloraFaunaItem) => {
-          const diaryPost: FeedPost = {
-            id: `post-${Date.now()}`,
-            author: {
-              name: 'Thanh Thảo',
-              avatar: '/assets/c3de37e21a9b752dc3aeac3312fa8fc13160c641.png',
-              location: 'Bidoup Núi Bà',
-              timeAgo: 'Just now'
-            },
-            caption: `Vừa quét được loài thực vật: ${item.commonName} (${item.localName}). ${item.toxicity}`,
-            metrics: {
-              distance: '7.77 km',
-              elevation: '+450 m',
-              type: 'Flora Lens'
-            },
-            photo: '/assets/b52ba1f177c970ae590d50a017afbc0d4019f65b.png',
-            mapPreview: 'Bidoup · Tọa độ sinh thái',
-            likes: 1,
-            hasLiked: true,
-            comments: []
-          };
-          setPosts([diaryPost, ...posts]);
-        }}
-      />
-
-      {/* 5. Fall Detection 60-second Countdown Siren Modal */}
-      <FallCountdownModal
-        isOpen={fallModalOpen}
-        onClose={() => setFallModalOpen(false)}
-        onTriggerSOS={handleTriggerSOS}
-      />
-
-      {/* 6. Panic SOS Emergency Distress Modal */}
-      <PanicSOSModal
-        isOpen={panicSOSOpen}
-        onClose={() => setPanicSOSOpen(false)}
-        coordinates={userCoords}
-      />
     </div>
   );
 }

@@ -27,8 +27,14 @@ export const OfflineModal: React.FC<OfflineModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-sm bg-[#1B221D] border border-[#2E3B32] rounded-3xl p-5 shadow-2xl animate-in zoom-in-95">
+    <div
+      onClick={onClose}
+      className="absolute inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-xs animate-in fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-h-[92%] bg-[#1B221D] border border-[#2E3B32] rounded-3xl p-5 shadow-2xl overflow-y-auto animate-in zoom-in-95"
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2E3B32]">
           <div className="flex items-center gap-2.5">
